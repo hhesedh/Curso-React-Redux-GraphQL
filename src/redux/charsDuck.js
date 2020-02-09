@@ -1,5 +1,5 @@
-import axios from 'axios';
 import { updateDB, getFavs } from '../firebase';
+import ApolloClient, { gql } from 'apollo-boost';
 
 // constants
 const initialData = {
@@ -7,9 +7,14 @@ const initialData = {
 	fetchingFavorites: false,
 	array: [],
 	current: {},
-	favorites: []
+	favorites: [],
+	nextPage: 1
 };
-const URL = 'https://rickandmortyapi.com/api/character';
+const client = new ApolloClient({
+	uri: 'https://rickandmortyapi.com/graphql'
+});
+
+const UPDATE_PAGE = 'UPDATE_PAGE';
 
 const GET_CHARACTERS = 'GET_CHARACTERS';
 const GET_CHARACTERS_SUCCESS = 'GET_CHARACTERS_SUCCESS';
@@ -25,6 +30,8 @@ const GET_FAVS_ERROR = 'GET_FAVS_ERROR';
 // reducer
 export default function reducer(state = initialData, action) {
 	switch (action.type) {
+		case UPDATE_PAGE:
+			return { ...state, nextPage: action.payload };
 		case GET_FAVS:
 			return { ...state, fetchingFavorites: true };
 		case GET_FAVS_ERROR:
@@ -87,11 +94,20 @@ export const addToFavoritesAction = () => (dispatch, getState) => {
 		type: ADD_TO_FAVORITES,
 		payload: { array: [...array], favorites: [...favorites] }
 	});
+
+	if (!array.length) {
+		getCharactersAction()(dispatch, getState);
+	}
 };
 
 export const removeCharacterAction = () => (dispatch, getState) => {
 	const { array } = getState().characters;
 	array.shift();
+
+	if (!array.length) {
+		getCharactersAction()(dispatch, getState);
+		return;
+	}
 
 	dispatch({
 		type: REMOVE_CHARACTER,
@@ -100,7 +116,54 @@ export const removeCharacterAction = () => (dispatch, getState) => {
 };
 
 export const getCharactersAction = () => (dispatch, getState) => {
+	const query = gql`
+		query($page: Int) {
+			characters(page: $page) {
+				info {
+					pages
+					next
+					prev
+				}
+
+				results {
+					name
+					image
+				}
+			}
+		}
+	`;
+
 	dispatch({
+		type: GET_CHARACTERS
+	});
+
+	const { nextPage } = getState().characters;
+
+	return client
+		.query({ query, variables: { page: nextPage } })
+		.then(({ data, error }) => {
+			if (error) {
+				dispatch({
+					type: GET_CHARACTERS_ERROR,
+					payload: error
+				});
+				return;
+			}
+
+			dispatch({
+				type: GET_CHARACTERS_SUCCESS,
+				payload: data.characters.results
+			});
+
+			dispatch({
+				type: UPDATE_PAGE,
+				payload: data.characters.info.next
+					? data.characters.info.next
+					: 1
+			});
+		});
+
+	/* 	dispatch({
 		type: GET_CHARACTERS
 	});
 	return axios
@@ -117,5 +180,5 @@ export const getCharactersAction = () => (dispatch, getState) => {
 				type: GET_CHARACTERS_ERROR,
 				payload: err.response.message
 			});
-		});
+		}); */
 };
