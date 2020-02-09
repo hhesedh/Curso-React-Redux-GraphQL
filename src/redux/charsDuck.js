@@ -1,5 +1,5 @@
-import axios from 'axios';
 import { updateDB, getFavs } from '../firebase';
+import ApolloClient, { gql } from 'apollo-boost';
 
 // constants
 const initialData = {
@@ -9,7 +9,9 @@ const initialData = {
 	current: {},
 	favorites: []
 };
-const URL = 'https://rickandmortyapi.com/api/character';
+const client = new ApolloClient({
+	uri: 'https://rickandmortyapi.com/graphql'
+});
 
 const GET_CHARACTERS = 'GET_CHARACTERS';
 const GET_CHARACTERS_SUCCESS = 'GET_CHARACTERS_SUCCESS';
@@ -100,7 +102,37 @@ export const removeCharacterAction = () => (dispatch, getState) => {
 };
 
 export const getCharactersAction = () => (dispatch, getState) => {
+	const query = gql`
+		{
+			characters {
+				results {
+					name
+					image
+				}
+			}
+		}
+	`;
+
 	dispatch({
+		type: GET_CHARACTERS
+	});
+
+	return client.query({ query }).then(({ data, error }) => {
+		if (error) {
+			dispatch({
+				type: GET_CHARACTERS_ERROR,
+				payload: error
+			});
+			return;
+		}
+
+		dispatch({
+			type: GET_CHARACTERS_SUCCESS,
+			payload: data.characters.results
+		});
+	});
+
+	/* 	dispatch({
 		type: GET_CHARACTERS
 	});
 	return axios
@@ -117,5 +149,5 @@ export const getCharactersAction = () => (dispatch, getState) => {
 				type: GET_CHARACTERS_ERROR,
 				payload: err.response.message
 			});
-		});
+		}); */
 };
