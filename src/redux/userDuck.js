@@ -45,18 +45,17 @@ export const logOutAction = () => (dispatch, getState) => {
 	dispatch({
 		type: LOGOUT
 	});
-
-	localStorage.removeItem('storage');
 };
-export const restoreSessionAction = () => dispatch => {
+export const restoreSessionAction = () => (dispatch, getState) => {
 	const stringStorage = localStorage.getItem('storage');
 	const storage = JSON.parse(stringStorage);
-	console.log('storage', storage);
 	if (storage && storage.user) {
 		dispatch({
 			type: LOGIN_SUCCESS,
 			payload: storage.user
 		});
+
+		retrieveFavs()(dispatch, getState);
 	}
 };
 

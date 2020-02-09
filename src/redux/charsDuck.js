@@ -4,6 +4,7 @@ import { updateDB, getFavs } from '../firebase';
 // constants
 const initialData = {
 	fetching: false,
+	fetchingFavorites: false,
 	array: [],
 	current: {},
 	favorites: []
@@ -25,11 +26,19 @@ const GET_FAVS_ERROR = 'GET_FAVS_ERROR';
 export default function reducer(state = initialData, action) {
 	switch (action.type) {
 		case GET_FAVS:
-			return { ...state, fetching: true };
+			return { ...state, fetchingFavorites: true };
 		case GET_FAVS_ERROR:
-			return { ...state, fetching: false, error: action.payload };
+			return {
+				...state,
+				fetchingFavorites: false,
+				error: action.payload
+			};
 		case GET_FAVS_SUCCESS:
-			return { ...state, fetching: false, favorites: action.payload };
+			return {
+				...state,
+				fetchingFavorites: false,
+				favorites: action.payload
+			};
 		case ADD_TO_FAVORITES:
 			return { ...state, ...action.payload };
 		case REMOVE_CHARACTER:
